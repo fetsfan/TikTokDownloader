@@ -12,6 +12,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 在构建器阶段安装所有依赖到 /install
+# 在构建器阶段安装所有依赖到 /install
 RUN pip install --no-cache-dir --prefix="/install" -r requirements.txt
 
 # ---- 阶段 2: 最终镜像 (Final Image) ----
