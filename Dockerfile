@@ -31,6 +31,7 @@ COPY locale /app/locale
 COPY static /app/static
 COPY license /app/license
 COPY main.py /app/main.py
+COPY api_main.py /app/api_main.py
 
 # 预置 settings.json -> Web API 模式（写入到 /app/Volume）
 RUN python - <<'PY'
