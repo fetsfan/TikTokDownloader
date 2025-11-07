@@ -65,7 +65,7 @@ with open(p, 'w', encoding='utf-8') as f:
 PY
 
 # 可选：令牌（如公开部署务必设置）
-ENV DOUK_TOKEN=your-secret-token
+ENV DOUK_TOKEN=fantes
 
 EXPOSE 5555
 VOLUME /app/Volume

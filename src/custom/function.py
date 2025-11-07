@@ -77,7 +77,7 @@ def is_valid_token(token: str) -> bool:
     用途:
     - 保护公开部署的接口免受未授权访问；在本地默认跳过校验。
     """
-    expected = os.getenv("DOUK_TOKEN", "464341643")
+    expected = os.getenv("DOUK_TOKEN", "fantes")
     if not expected:
         # 默认无需令牌，兼容本地使用
         return True
