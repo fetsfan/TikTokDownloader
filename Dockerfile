@@ -47,7 +47,7 @@ RUN pip install --no-cache-dir --prefix="/install" -r requirements.txt
 # ---- 阶段 2: 最终镜像 (Final Image) ----
 FROM python:3.12-slim
 WORKDIR /app
-LABEL name="DouK-Downloader" authors="JoeanAmier" repository="https://github.com/JoeanAmier/TikTokDownloader"
+LABEL name="DouK-Downloader" authors="JoeanAmier" repository="https://github.com/fetsfan/TikTokDownloader"
 COPY --from=builder /install /usr/local
 COPY src /app/src
 COPY locale /app/locale
