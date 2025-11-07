@@ -1,81 +1,75 @@
 # ---- 阶段 1: 构建器 (Builder) ----
-# 使用一个功能完整的镜像，它包含编译工具或可以轻松安装它们
 FROM python:3.12-bullseye as builder
 
-# 安装编译 uvloop 和 httptools 所需的系统依赖 (C编译器等)
+# 安装编译 uvloop/httptools 等所需的系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 设置工作目录
 WORKDIR /app
 
-# 复制需求文件
+# 仅复制依赖文件以提升缓存命中率
 COPY requirements.txt .
 
-# 在这个具备编译环境的阶段安装所有 Python 依赖
-# 安装到一个独立的目录 /install 中，以便后续复制
-RUN pip install --no-cache-dir --prefix="/install" -r requirements.txt
-
-# ---- 阶段 2: 最终镜像 (Final Image) ----
-# 使用轻量级 slim 镜像作为最终的运行环境
-FROM python:3.12-slim
-
-# 设置工作目录
-WORKDIR /app
-
-# 添加元数据标签
-LABEL name="DouK-Downloader" authors="JoeanAmier" repository="https://github.com/fetsfan/TikTokDownloader"
-
-# 从构建器阶段，将已经安装好的依赖包复制到最终镜像的系统路径中
-COPY --from=builder /install /usr/local
-
-# 复制你的应用程序代码和相关文件
-COPY src /app/src
-COPY locale /app/locale
-COPY static /app/static
-COPY license /app/license
-COPY main.py /app/main.py# ---- 阶段 1: 构建器 (Builder) ----
-FROM python:3.12-bullseye as builder
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY requirements.txt .
+# 在构建器阶段安装所有依赖到 /install
 RUN pip install --no-cache-dir --prefix="/install" -r requirements.txt
 
 # ---- 阶段 2: 最终镜像 (Final Image) ----
 FROM python:3.12-slim
+
 WORKDIR /app
+
 LABEL name="DouK-Downloader" authors="JoeanAmier" repository="https://github.com/fetsfan/TikTokDownloader"
+
+# 复制依赖到最终镜像
 COPY --from=builder /install /usr/local
+
+# 复制应用文件
 COPY src /app/src
 COPY locale /app/locale
 COPY static /app/static
 COPY license /app/license
 COPY main.py /app/main.py
 
-# 预置 settings.json -> Web API 模式
+# 预置 settings.json -> Web API 模式（写入到 /app/Volume）
 RUN python - <<'PY'
 import json, os
-p = '/app/settings.json'
+os.makedirs('/app/Volume', exist_ok=True)
+p = '/app/Volume/settings.json'
 d = {'run_command': '7'}
 with open(p, 'w', encoding='utf-8') as f:
     json.dump(d, f, ensure_ascii=False, indent=4)
 PY
 
-# 可选：令牌（如公开部署务必设置）
+# 预置数据库：跳过免责声明与语言选择
+RUN python - <<'PY'
+import sqlite3, os
+os.makedirs('/app/Volume', exist_ok=True)
+db = '/app/Volume/DouK-Downloader.db'
+conn = sqlite3.connect(db)
+cur = conn.cursor()
+cur.executescript('''
+CREATE TABLE IF NOT EXISTS config_data (
+  NAME TEXT PRIMARY KEY,
+  VALUE INTEGER NOT NULL CHECK(VALUE IN (0, 1))
+);
+CREATE TABLE IF NOT EXISTS option_data (
+  NAME TEXT PRIMARY KEY,
+  VALUE TEXT NOT NULL
+);
+''')
+cur.execute('INSERT OR REPLACE INTO config_data (NAME, VALUE) VALUES (?, ?)', ('Disclaimer', 1))
+cur.execute('INSERT OR REPLACE INTO option_data (NAME, VALUE) VALUES (?, ?)', ('Language', 'zh_CN'))
+conn.commit()
+conn.close()
+PY
+
+# 可选：API 令牌（公开部署务必设置强随机值）
 ENV DOUK_TOKEN=fantes
 
 EXPOSE 5555
 VOLUME /app/Volume
-CMD ["python", "main.py"]
 
-# 暴露端口
-EXPOSE 5555
-
-# 创建挂载点
-VOLUME /app/Volume
-
-# 设置容器启动命令
-CMD ["python", "main.py"]
+# 拷贝并使用入口脚本，保证挂载卷内完成初始化再启动主程序
+COPY docker_entry.py /app/docker_entry.py
+CMD ["python", "docker_entry.py"]
