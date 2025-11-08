@@ -103,12 +103,41 @@ class APIServer(TikTok):
     def setup_routes(self):
         @self.server.get(
             "/",
-            summary=_("访问项目 GitHub 仓库"),
-            description=_("重定向至项目 GitHub 仓库主页"),
+            summary=_("服务状态"),
+            description=_("返回服务状态与文档地址，用于平台检测"),
             tags=[_("项目")],
+            response_model=DataResponse,
         )
         async def index():
-            return RedirectResponse(url=REPOSITORY)
+            """Root route for service status.
+
+            Returns:
+            - DataResponse: message and links indicating service is healthy.
+            """
+            return DataResponse(
+                message=_("服务正常运行"),
+                data={"docs": "/docs", "repository": REPOSITORY},
+                params=None,
+            )
+
+        @self.server.get(
+            "/health",
+            summary=_("健康检查"),
+            description=_("返回 200 OK 供 PaaS 健康检查使用"),
+            tags=[_("项目")],
+            response_model=DataResponse,
+        )
+        async def health():
+            """Health check endpoint for deployment platforms.
+
+            Returns:
+            - DataResponse: health status OK.
+            """
+            return DataResponse(
+                message=_("OK"),
+                data=None,
+                params=None,
+            )
 
         @self.server.get(
             "/token",

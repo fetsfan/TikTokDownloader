@@ -32,6 +32,7 @@ COPY static /app/static
 COPY license /app/license
 COPY main.py /app/main.py
 COPY api_main.py /app/api_main.py
+COPY healthcheck.py /app/healthcheck.py
 
 # 预置 settings.json -> Web API 模式（写入到 /app/Volume）
 RUN python - <<'PY'
@@ -74,4 +75,6 @@ VOLUME /app/Volume
 
 # 拷贝并使用入口脚本，保证挂载卷内完成初始化再启动主程序
 COPY docker_entry.py /app/docker_entry.py
+HEALTHCHECK --interval=10s --timeout=3s --start-period=40s --retries=3 \
+  CMD python /app/healthcheck.py || exit 1
 CMD ["python", "docker_entry.py"]
